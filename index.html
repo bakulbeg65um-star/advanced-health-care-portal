@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Health Care Portal</title>
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-dark: #0369a1;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .lang-select {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-danger {
+            background-color: #ef4444;
+        }
+
+        .status-box {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+
+        .hidden { display: none !important; }
+
+        .history-list-item {
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header with Language Selector & Account Navigation -->
+    <div class="header-bar">
+        <div>
+            <h2 style="margin:0; color: var(--primary);" id="appTitle">হেলথ কেয়ার পোর্টাল</h2>
+            <small id="currentUserDisplay"></small>
+        </div>
+        <div class="no-print" style="display: flex; gap: 10px; align-items: center;">
+            <select class="lang-select" id="langSelect" onchange="switchLanguage(this.value)">
+                <option value="bn">বাংলা</option>
+                <option value="en">English</option>
+            </select>
+            <button id="logoutBtn" class="btn-danger hidden" onclick="logout()"><span data-key="logout">লগআউট</span></button>
+        </div>
+    </div>
+
+    <!-- Auth Section (Register / Login) -->
+    <div id="authSection" class="card">
+        <h3 id="authTitle" data-key="authTitle">রেজিস্ট্রেশন / সাইন ইন করুন</h3>
+        <div class="grid">
+            <div class="form-group">
+                <label data-key="fullName">পূর্ণ নাম:</label>
+                <input type="text" id="regName">
+            </div>
+            <div class="form-group">
+                <label data-key="username">ইউজারনেম / আইডি (ইউনিক):</label>
+                <input type="text" id="regUsername">
+            </div>
+            <div class="form-group">
+                <label data-key="gender">লিঙ্গ (Gender):</label>
+                <select id="regGender">
+                    <option value="male" data-key="male">পুরুষ</option>
+                    <option value="female" data-key="female">নারী</option>
+                    <option value="other" data-key="other">অন্যান্য</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label data-key="bloodGroup">রক্তের গ্রুপ:</label>
+                <select id="regBlood">
+                    <option>A+</option><option>A-</option>
+                    <option>B+</option><option>B-</option>
+                    <option>O+</option><option>O-</option>
+                    <option>AB+</option><option>AB-</option>
+                </select>
+            </div>
+        </div>
+        <button onclick="registerOrLogin()" data-key="loginBtn">অ্যাকাউন্টে প্রবেশ করুন / রেজিস্ট্রেশন করুন</button>
+    </div>
+
+    <!-- Main Dashboard Section (Logged In) -->
+    <div id="dashboardSection" class="hidden">
+        
+        <!-- Mode Switcher: Patient View vs Doctor View -->
+        <div class="card no-print" style="background: #e0f2fe; text-align: center;">
+            <span style="font-weight: bold;" data-key="viewMode">ভিউ মোড: </span>
+            <button onclick="toggleDoctorPortal(false)" data-key="patientView">রোগী পোর্টাল</button>
+            <button onclick="toggleDoctorPortal(true)" style="background-color: #0d9488;" data-key="doctorView">👨‍⚕️ ডাক্তার পোর্টাল (মেডিকেল হিস্ট্রি)</button>
+        </div>
+
+        <!-- DOCTOR PORTAL (Summarized History for Doctors) -->
+        <div id="doctorPortal" class="hidden">
+            <div class="card">
+                <h2 style="color: #0d9488;" data-key="docSummaryTitle">👨‍⚕️ সম্পূর্ণ মেডিকেল হিস্ট্রি (Doctor's View)</h2>
+                <div id="doctorPatientSummary"></div>
+                
+                <hr style="margin: 20px 0;">
+                
+                <h3 data-key="writePrescription">নতুন প্রেসক্রিপশন লিখুন</h3>
+                <div class="form-group">
+                    <label data-key="rxNotes">রোগ নির্ণয় ও ওষুধের নির্দেশনাবলী (Rx):</label>
+                    <textarea id="prescriptionInput" rows="4" placeholder="যেমন: Napa 500mg - ১+০+১ (৫ দিন)..."></textarea>
+                </div>
+                <button onclick="addPrescription()" style="background-color: #0d9488;" data-key="saveRx">প্রেসক্রিপশন যুক্ত করুন</button>
+            </div>
+        </div>
+
+        <!-- PATIENT PORTAL -->
+        <div id="patientPortal">
+            <!-- 1. Vitals & Personal Info -->
+            <div class="card">
+                <h3 data-key="vitalsTitle">ব্যক্তিগত ও জরুরি স্বাস্থ্য তথ্য</h3>
+                <div class="grid">
+                    <div class="form-group">
+                        <label data-key="height">উচ্চতা (সেমি):</label>
+                        <input type="number" id="heightInput">
+                    </div>
+                    <div class="form-group">
+                        <label data-key="weight">ওজন (কেজি):</label>
+                        <input type="number" id="weightInput">
+                    </div>
+                    <div class="form-group">
+                        <label data-key="emergencyNo">জরুরি যোগাযোগ নম্বর:</label>
+                        <input type="tel" id="emergencyInput">
+                    </div>
+                    <div class="form-group">
+                        <label data-key="bp">ব্ল্যাড প্রেশার (BP):</label>
+                        <input type="text" id="bpInput" placeholder="120/80">
+                    </div>
+                    <div class="form-group">
+                        <label data-key="sugar">ডায়াবেটিস (mmol/L):</label>
+                        <input type="number" step="0.1" id="sugarInput">
+                    </div>
+                </div>
+                <button onclick="saveVitals()" data-key="saveVitalsBtn">স্বাস্থ্য তথ্য আপডেট করুন</button>
+            </div>
+
+            <!-- 2. Doctor Appointment History -->
+            <div class="card">
+                <h3 data-key="appointTitle">ডাক্তার অ্যাপয়েন্টমেন্ট ট্র্যাকার</h3>
+                <div class="grid">
+                    <div class="form-group">
+                        <label data-key="lastAppoint">সর্বশেষ দেখানোর তারিখ:</label>
+                        <input type="date" id="lastDoctorDate">
+                    </div>
+                    <div class="form-group">
+                        <label data-key="nextAppoint">পরবর্তী অ্যাপয়েন্টমেন্টের তারিখ:</label>
+                        <input type="date" id="nextDoctorDate">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Blood Donation Tracker -->
+            <div class="card">
+                <h3 data-key="bloodTitle">রক্তদান ট্র্যাকার</h3>
+                <div class="grid">
+                    <div class="form-group">
+                        <label data-key="lastDonation">সর্বশেষ রক্তদানের তারিখ:</label>
+                        <input type="date" id="lastDonationDate" onchange="calculateNextDonation()">
+                    </div>
+                </div>
+                <div class="status-box" id="donationStatus"></div>
+            </div>
+
+            <!-- 4. Female Health Tracker (Gender-specific) -->
+            <div id="femaleHealthCard" class="card hidden">
+                <h3 style="color: #db2777;" data-key="femaleHealthTitle">🌸 নারী স্বাস্থ্য ট্র্যাকার (Period & Pregnancy)</h3>
+                <div class="grid">
+                    <div class="form-group">
+                        <label data-key="lastPeriod">সর্বশেষ পিরিয়ড শুরুর তারিখ:</label>
+                        <input type="date" id="lastPeriodDate" onchange="trackFemaleHealth()">
+                    </div>
+                    <div class="form-group">
+                        <label data-key="isPregnant">গর্ভবতী (Pregnancy Status):</label>
+                        <select id="isPregnant" onchange="trackFemaleHealth()">
+                            <option value="no" data-key="no">না</option>
+                            <option value="yes" data-key="yes">হ্যাঁ</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="status-box" id="femaleHealthStatus"></div>
+            </div>
+
+            <!-- 5. Daily Medicine Reminders -->
+            <div class="card">
+                <h3 data-key="medTitle">দৈনন্দিন ওষুধের ট্র্যাকার</h3>
+                <div class="grid">
+                    <div class="form-group">
+                        <label data-key="medName">ওষুধের নাম:</label>
+                        <input type="text" id="medName">
+                    </div>
+                    <div class="form-group">
+                        <label data-key="medTime">খাওয়ার সময়:</label>
+                        <input type="text" id="medTime" placeholder="সকাল-রাত">
+                    </div>
+                </div>
+                <button onclick="addMedicine()" data-key="addMedBtn">ওষুধ যোগ করুন</button>
+                <div id="medicineList" style="margin-top:15px;"></div>
+            </div>
+
+            <!-- 6. Doctor Prescriptions History -->
+            <div class="card">
+                <h3 data-key="prescriptionsListTitle">সংরক্ষিত প্রেসক্রিপশনসমূহ</h3>
+                <div id="prescriptionsContainer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Languages Dictionary
+    const i18n = {
+        bn: {
+            appTitle: "হেলথ কেয়ার পোর্টাল",
+            authTitle: "রেজিস্ট্রেশন / সাইন ইন করুন",
+            fullName: "পূর্ণ নাম:",
+            username: "ইউজারনেম / আইডি (ইউনিক):",
+            gender: "লিঙ্গ (Gender):",
+            male: "পুরুষ", female: "নারী", other: "অন্যান্য",
+            bloodGroup: "রক্তের গ্রুপ:",
+            loginBtn: "অ্যাকাউন্টে প্রবেশ করুন / রেজিস্ট্রেশন করুন",
+            logout: "লগআউট",
+            viewMode: "ভিউ মোড: ",
+            patientView: "রোগী পোর্টাল",
+            doctorView: "👨‍⚕️ ডাক্তার পোর্টাল (মেডিকেল হিস্ট্রি)",
+            docSummaryTitle: "👨‍⚕️ সম্পূর্ণ মেডিকেল হিস্ট্রি (Doctor's View)",
+            writePrescription: "নতুন প্রেসক্রিপশন লিখুন",
+            rxNotes: "রোগ নির্ণয় ও ওষুধের নির্দেশনাবলী (Rx):",
+            saveRx: "প্রেসক্রিপশন যুক্ত করুন",
+            vitalsTitle: "ব্যক্তিগত ও জরুরি স্বাস্থ্য তথ্য",
+            height: "উচ্চতা (সেমি):", weight: "ওজন (কেজি):", emergencyNo: "জরুরি যোগাযোগ নম্বর:",
+            bp: "ব্ল্যাড প্রেশার (BP):", sugar: "ডায়াবেটিস (mmol/L):", saveVitalsBtn: "স্বাস্থ্য তথ্য আপডেট করুন",
+            appointTitle: "ডাক্তার অ্যাপয়েন্টমেন্ট ট্র্যাকার",
+            lastAppoint: "সর্বশেষ দেখানোর তারিখ:", nextAppoint: "পরবর্তী অ্যাপয়েন্টমেন্টের তারিখ:",
+            bloodTitle: "রক্তদান ট্র্যাকার", lastDonation: "সর্বশেষ রক্তদানের তারিখ:",
+            femaleHealthTitle: "🌸 নারী স্বাস্থ্য ট্র্যাকার (Period & Pregnancy)",
+            lastPeriod: "সর্বশেষ পিরিয়ড শুরুর তারিখ:", isPregnant: "গর্ভবতী (Pregnancy Status):",
+            yes: "হ্যাঁ", no: "না",
+            medTitle: "দৈনন্দিন ওষুধের ট্র্যাকার", medName: "ওষুধের নাম:", medTime: "খাওয়ার সময়:", addMedBtn: "ওষুধ যোগ করুন",
+            prescriptionsListTitle: "সংরক্ষিত প্রেসক্রিপশনসমূহ"
+        },
+        en: {
+            appTitle: "Health Care Portal",
+            authTitle: "Register / Sign In",
+            fullName: "Full Name:",
+            username: "Username / ID (Unique):",
+            gender: "Gender:",
+            male: "Male", female: "Female", other: "Other",
+            bloodGroup: "Blood Group:",
+            loginBtn: "Enter Account / Register",
+            logout: "Logout",
+            viewMode: "View Mode: ",
+            patientView: "Patient Portal",
+            doctorView: "👨‍⚕️ Doctor Portal (Medical History)",
+            docSummaryTitle: "👨‍⚕️ Complete Medical History (Doctor's View)",
+            writePrescription: "Write New Prescription",
+            rxNotes: "Diagnosis & Prescription Details (Rx):",
+            saveRx: "Add Prescription",
+            vitalsTitle: "Personal & Emergency Vitals",
+            height: "Height (cm):", weight: "Weight (kg):", emergencyNo: "Emergency Phone:",
+            bp: "Blood Pressure (BP):", sugar: "Diabetes (mmol/L):", saveVitalsBtn: "Update Health Data",
+            appointTitle: "Doctor Appointment Tracker",
+            lastAppoint: "Last Doctor Visit:", nextAppoint: "Next Appointment Date:",
+            bloodTitle: "Blood Donation Tracker", lastDonation: "Last Donation Date:",
+            femaleHealthTitle: "🌸 Female Health Tracker (Period & Pregnancy)",
+            lastPeriod: "Last Period Start Date:", isPregnant: "Is Pregnant:",
+            yes: "Yes", no: "No",
+            medTitle: "Daily Medicine Reminders", medName: "Medicine Name:", medTime: "Time/Frequency:", addMedBtn: "Add Medicine",
+            prescriptionsListTitle: "Saved Prescriptions"
+        }
+    };
+
+    let currentLang = 'bn';
+    let currentUser = null;
+
+    // Language Selector
+    function switchLanguage(lang) {
+        currentLang = lang;
+        document.querySelectorAll('[data-key]').forEach(elem => {
+            const key = elem.getAttribute('data-key');
+            if (i18n[lang][key]) {
+                elem.innerText = i18n[lang][key];
+            }
+        });
+    }
+
+    // User Authentication & LocalStorage State Handling
+    function registerOrLogin() {
+        const username = document.getElementById('regUsername').value.trim();
+        const name = document.getElementById('regName').value.trim();
+        const gender = document.getElementById('regGender').value;
+        const blood = document.getElementById('regBlood').value;
+
+        if (!username || !name) {
+            alert(currentLang === 'bn' ? 'ইউজারনেম এবং নাম পূরণ করুন।' : 'Please fill Username and Name.');
+            return;
+        }
+
+        let users = JSON.parse(localStorage.getItem('users') || '{}');
+
+        if (!users[username]) {
+            users[username] = {
+                profile: { name, username, gender, blood },
+                vitals: {},
+                medicines: [],
+                prescriptions: []
+            };
+            localStorage.setItem('users', JSON.stringify(users));
+        }
+
+        currentUser = users[username];
+        localStorage.setItem('currentUserKey', username);
+        loadDashboard();
+    }
+
+    function loadDashboard() {
+        document.getElementById('authSection').classList.add('hidden');
+        document.getElementById('dashboardSection').classList.remove('hidden');
+        document.getElementById('logoutBtn').classList.remove('hidden');
+
+        document.getElementById('currentUserDisplay').innerText = `[${currentUser.profile.name} - ${currentUser.profile.gender.toUpperCase()}]`;
+
+        // Render Gender-based features
+        if (currentUser.profile.gender === 'female') {
+            document.getElementById('femaleHealthCard').classList.remove('hidden');
+        } else {
+            document.getElementById('femaleHealthCard').classList.add('hidden');
+        }
+
+        renderMedicines();
+        renderPrescriptions();
+    }
+
+    function logout() {
+        localStorage.removeItem('currentUserKey');
+        location.reload();
+    }
+
+    // Doctor View Toggle & Summary Generator
+    function toggleDoctorPortal(isDoctor) {
+        if (isDoctor) {
+            document.getElementById('patientPortal').classList.add('hidden');
+            document.getElementById('doctorPortal').classList.remove('hidden');
+            generateDoctorSummary();
+        } else {
+            document.getElementById('patientPortal').classList.remove('hidden');
+            document.getElementById('doctorPortal').classList.add('hidden');
+        }
+    }
+
+    function generateDoctorSummary() {
+        const p = currentUser.profile;
+        const v = currentUser.vitals || {};
+        const html = `
+            <p><b>রোগীর নাম:</b> ${p.name} | <b>লিঙ্গ:</b> ${p.gender} | <b>রক্তের গ্রুপ:</b> ${p.blood}</p>
+            <p><b>উচ্চতা:</b> ${v.height || 'N/A'} cm | <b>ওজন:</b> ${v.weight || 'N/A'} kg</p>
+            <p><b>সর্বশেষ BP:</b> ${v.bp || 'N/A'} | <b>ডায়াবেটিস:</b> ${v.sugar || 'N/A'} mmol/L</p>
+            <p><b>জরুরি যোগাযোগ:</b> ${v.emergency || 'N/A'}</p>
+        `;
+        document.getElementById('doctorPatientSummary').innerHTML = html;
+    }
+
+    function addPrescription() {
+        const rxText = document.getElementById('prescriptionInput').value.trim();
+        if (!rxText) return;
+
+        const rxObj = {
+            date: new Date().toLocaleDateString(),
+            text: rxText
+        };
+
+        currentUser.prescriptions = currentUser.prescriptions || [];
+        currentUser.prescriptions.push(rxObj);
+        saveUserData();
+
+        document.getElementById('prescriptionInput').value = '';
+        renderPrescriptions();
+        alert(currentLang === 'bn' ? 'প্রেসক্রিপশন সফলভাবে সেভ হয়েছে!' : 'Prescription Saved Successfully!');
+    }
+
+    function renderPrescriptions() {
+        const container = document.getElementById('prescriptionsContainer');
+        container.innerHTML = '';
+        (currentUser.prescriptions || []).forEach(rx => {
+            const div = document.createElement('div');
+            div.className = 'history-list-item';
+            div.innerHTML = `<b>তারিখ: ${rx.date}</b><br><pre style="font-family:inherit; margin:5px 0;">${rx.text}</pre>`;
+            container.appendChild(div);
+        });
+    }
+
+    // Vitals Logic
+    function saveVitals() {
+        currentUser.vitals = {
+            height: document.getElementById('heightInput').value,
+            weight: document.getElementById('weightInput').value,
+            emergency: document.getElementById('emergencyInput').value,
+            bp: document.getElementById('bpInput').value,
+            sugar: document.getElementById('sugarInput').value
+        };
+        saveUserData();
+        alert(currentLang === 'bn' ? 'স্বাস্থ্য তথ্য সেভ হয়েছে!' : 'Vitals saved!');
+    }
+
+    // Medicine Logic
+    function addMedicine() {
+        const name = document.getElementById('medName').value;
+        const time = document.getElementById('medTime').value;
+
+        if (!name || !time) return;
+
+        currentUser.medicines = currentUser.medicines || [];
+        currentUser.medicines.push({ name, time, done: false });
+        saveUserData();
+
+        document.getElementById('medName').value = '';
+        document.getElementById('medTime').value = '';
+        renderMedicines();
+    }
+
+    function renderMedicines() {
+        const list = document.getElementById('medicineList');
+        list.innerHTML = '';
+        (currentUser.medicines || []).forEach((med, index) => {
+            const div = document.createElement('div');
+            div.className = 'history-list-item';
+            div.style.display = 'flex';
+            div.style.justifySpaceBetween = 'space-between';
+            div.innerHTML = `
+                <span><b>${med.name}</b> - ${med.time}</span>
+                <input type="checkbox" ${med.done ? 'checked' : ''} onchange="toggleMed(${index})">
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function toggleMed(index) {
+        currentUser.medicines[index].done = !currentUser.medicines[index].done;
+        saveUserData();
+    }
+
+    // Blood & Female Calculators
+    function calculateNextDonation() {
+        const lastDate = document.getElementById('lastDonationDate').value;
+        if (!lastDate) return;
+        const nextDate = new Date(lastDate);
+        nextDate.setDate(nextDate.getDate() + 120);
+        document.getElementById('donationStatus').innerHTML = `পরবর্তী রক্তদানের সম্ভাব্য তারিখ: <b>${nextDate.toLocaleDateString()}</b>`;
+    }
+
+    function trackFemaleHealth() {
+        const lastPeriod = document.getElementById('lastPeriodDate').value;
+        const isPregnant = document.getElementById('isPregnant').value;
+        const box = document.getElementById('femaleHealthStatus');
+        if (!lastPeriod) return;
+
+        const pDate = new Date(lastPeriod);
+        if (isPregnant === 'yes') {
+            const edd = new Date(pDate);
+            edd.setDate(edd.getDate() + 280);
+            box.innerHTML = `🤰 সম্ভাব্য প্রসবের তারিখ (EDD): <b>${edd.toLocaleDateString()}</b>`;
+        } else {
+            const nextP = new Date(pDate);
+            nextP.setDate(nextP.getDate() + 28);
+            box.innerHTML = `🌸 পরবর্তী পিরিয়ডের তারিখ: <b>${nextP.toLocaleDateString()}</b>`;
+        }
+    }
+
+    function saveUserData() {
+        let users = JSON.parse(localStorage.getItem('users') || '{}');
+        users[currentUser.profile.username] = currentUser;
+        localStorage.setItem('users', JSON.stringify(users));
+    }
+
+    // Auto Login Check
+    window.onload = function() {
+        const activeKey = localStorage.getItem('currentUserKey');
+        if (activeKey) {
+            let users = JSON.parse(localStorage.getItem('users') || '{}');
+            if (users[activeKey]) {
+                currentUser = users[activeKey];
+                loadDashboard();
+            }
+        }
+    };
+</script>
+
+</body>
+</html>
